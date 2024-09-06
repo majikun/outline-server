@@ -16,6 +16,7 @@ import * as child_process from 'child_process';
 import * as jsyaml from 'js-yaml';
 import * as mkdirp from 'mkdirp';
 import * as path from 'path';
+import { SocksProxyAgent } from 'socks-proxy-agent'; // 引入 SOCKS5 代理模块
 
 import * as file from '../infrastructure/file';
 import * as logging from '../infrastructure/logging';
@@ -28,13 +29,10 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
   private ipAsnFilename?: string;
   private isAsnMetricsEnabled = false;
   private isReplayProtectionEnabled = false;
+  
+  // 定义代理地址和端口
+  private proxyAgent = new SocksProxyAgent('socks5h://127.0.0.1:40000');
 
-  /**
-   * @param binaryFilename The location for the outline-ss-server binary.
-   * @param configFilename The location for the outline-ss-server config.
-   * @param verbose Whether to run the server in verbose mode.
-   * @param metricsLocation The location from where to serve the Prometheus data metrics.
-   */
   constructor(
     private readonly binaryFilename: string,
     private readonly configFilename: string,
@@ -42,19 +40,11 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     private readonly metricsLocation: string
   ) {}
 
-  /**
-   * Configures the Shadowsocks Server with country data to annotate Prometheus data metrics.
-   * @param ipCountryFilename The location of the ip-country.mmdb IP-to-country database file.
-   */
   configureCountryMetrics(ipCountryFilename: string): OutlineShadowsocksServer {
     this.ipCountryFilename = ipCountryFilename;
     return this;
   }
 
-  /**
-   * Configures the Shadowsocks Server with ASN data to annotate Prometheus data metrics.
-   * @param ipAsnFilename The location  of the ip-asn.mmdb IP-to-ASN database file.
-   */
   configureAsnMetrics(ipAsnFilename: string): OutlineShadowsocksServer {
     this.ipAsnFilename = ipAsnFilename;
     return this;
@@ -65,9 +55,6 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     return this;
   }
 
-  // Promise is resolved after the outline-ss-config config is updated and the SIGHUP sent.
-  // Keys may not be active yet.
-  // TODO(fortuna): Make promise resolve when keys are ready.
   update(keys: ShadowsocksAccessKey[]): Promise<void> {
     return this.writeConfigFile(keys).then(() => {
       if (!this.ssProcess) {
@@ -118,19 +105,28 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     if (this.isReplayProtectionEnabled) {
       commandArguments.push('--replay_history=10000');
     }
+
     logging.info('======== Starting Outline Shadowsocks Service ========');
     logging.info(`${this.binaryFilename} ${commandArguments.map((a) => `"${a}"`).join(' ')}`);
-    this.ssProcess = child_process.spawn(this.binaryFilename, commandArguments);
+
+    // 通过 SOCKS5 代理启动 Shadowsocks 服务
+    this.ssProcess = child_process.spawn(this.binaryFilename, commandArguments, {
+      env: {
+        ...process.env, // 继承现有环境变量
+        'ALL_PROXY': 'socks5h://127.0.0.1:40000' // 设置 ALL_PROXY 环境变量以强制通过代理
+      }
+    });
+
     this.ssProcess.on('error', (error) => {
       logging.error(`Error spawning outline-ss-server: ${error}`);
     });
+
     this.ssProcess.on('exit', (code, signal) => {
       logging.info(`outline-ss-server has exited with error. Code: ${code}, Signal: ${signal}`);
       logging.info('Restarting');
       this.start();
     });
-    // This exposes the outline-ss-server output on the docker logs.
-    // TODO(fortuna): Consider saving the output and expose it through the manager service.
+
     this.ssProcess.stdout.pipe(process.stdout);
     this.ssProcess.stderr.pipe(process.stderr);
   }
