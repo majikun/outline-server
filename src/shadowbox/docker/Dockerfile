@@ -27,7 +27,16 @@ STOPSIGNAL SIGKILL
 
 # We use curl to detect the server's public IP. We need to use the --date option in `date` to
 # safely grab the ip-to-country database.
-RUN apk add --no-cache --upgrade coreutils curl
+RUN apk add --no-cache --upgrade coreutils curl iproute2 gnupg lsb-release
+
+# Add Cloudflare WARP repository and install the client
+RUN curl https://pkg.cloudflareclient.com/pubkey.gpg | tee /etc/apt/trusted.gpg.d/cloudflare-warp.asc \
+    && echo "deb http://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list \
+    && apt-get update && apt-get install -y cloudflare-warp
+
+# Register Cloudflare Warp (this may require manual setup or script modification)
+RUN warp-cli registration new
+RUN warp-cli set-mode proxy
 
 COPY . /
 
@@ -36,4 +45,5 @@ RUN /etc/periodic/weekly/update_mmdb.sh
 # Install shadowbox.
 WORKDIR /opt/outline-server
 
-CMD ["/cmd.sh"]
+CMD warp-cli connect && /cmd.sh
+#CMD ["/cmd.sh"]
