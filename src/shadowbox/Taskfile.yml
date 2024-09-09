@@ -157,6 +157,9 @@ tasks:
 
           # Where to report metrics to, if opted-in.
           -e "SB_METRICS_URL={{.METRICS_URL | default "https://dev.metrics.getoutline.org"}}"
+          
+          # Set the ALL_PROXY environment variable to force traffic through the proxy
+          -e "ALL_PROXY=socks5h://127.0.0.1:40000"
 
           # The Outline server image to run.
           '{{.IMAGE_NAME}}'

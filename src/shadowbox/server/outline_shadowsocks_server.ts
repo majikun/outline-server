@@ -143,7 +143,6 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     this.ssProcess = child_process.spawn(this.binaryFilename, commandArguments, {
       env: {
         ...process.env, // 继承现有环境变量
-        'ALL_PROXY': 'socks5h://127.0.0.1:40000' // 设置 ALL_PROXY 环境变量以强制通过代理
       }
     });
 

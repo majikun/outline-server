@@ -12,38 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Use the existing NODE_IMAGE that is pinned to the Alpine-based Node.js image
 ARG NODE_IMAGE
-
 FROM ${NODE_IMAGE}
 ARG VERSION
 
-# Save metadata on the software versions we are using.
 LABEL shadowbox.node_version=16.18.0
-
 LABEL shadowbox.github.release=${VERSION}
 
 # The user management service doesn't quit with SIGTERM.
 STOPSIGNAL SIGKILL
 
-# We use curl to detect the server's public IP. We need to use the --date option in `date` to
-# safely grab the ip-to-country database.
-RUN apk add --no-cache --upgrade coreutils curl iproute2 gnupg lsb-release
+# Install necessary packages using Alpine's package manager 'apk'
+RUN apk add --no-cache coreutils curl iproute2 gnupg
 
-# Add Cloudflare WARP repository and install the client
-RUN curl https://pkg.cloudflareclient.com/pubkey.gpg | tee /etc/apt/trusted.gpg.d/cloudflare-warp.asc \
-    && echo "deb http://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list \
-    && apt-get update && apt-get install -y cloudflare-warp
+# Manually download and install Cloudflare WARP for Alpine
+RUN curl -LO https://pkg.cloudflareclient.com/releases/cloudflare-warp-linux-x86_64.tgz \
+    && tar -xvzf cloudflare-warp-linux-x86_64.tgz \
+    && cp cloudflare-warp-linux-x86_64/warp-cli /usr/local/bin/ \
+    && rm -rf cloudflare-warp-linux-x86_64*
 
-# Register Cloudflare Warp (this may require manual setup or script modification)
-RUN warp-cli registration new
+# Register Cloudflare WARP
+RUN warp-cli register
 RUN warp-cli set-mode proxy
 
+# Copy project files into the container
 COPY . /
 
+# Update MMDB databases
 RUN /etc/periodic/weekly/update_mmdb.sh
 
-# Install shadowbox.
+# Set working directory
 WORKDIR /opt/outline-server
 
+# Ensure WARP connects on container startup and run the Outline server
 CMD warp-cli connect && /cmd.sh
-#CMD ["/cmd.sh"]
