@@ -91,7 +91,36 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     });
   }
 
+  // Method to check if the proxy is functioning
+  private checkProxyConnection() {
+    const options = {
+      hostname: 'ipinfo.io',
+      port: 443,
+      path: '/json',
+      method: 'GET',
+      agent: this.proxyAgent
+    };
+
+    const req = https.request(options, (res) => {
+      logging.info(`Proxy Check Status: ${res.statusCode}`);
+      res.on('data', (d) => {
+        process.stdout.write(d); // Log the proxy check response (IP details)
+      });
+    });
+
+    req.on('error', (e) => {
+      logging.error(`Proxy connection failed: ${e.message}`);
+    });
+
+    req.end();
+  }
+
   private start() {
+    logging.info('Starting Shadowsocks service with proxy...');
+
+    // Check if the proxy is working before starting the service
+    this.checkProxyConnection();
+
     const commandArguments = ['-config', this.configFilename, '-metrics', this.metricsLocation];
     if (this.ipCountryFilename) {
       commandArguments.push('-ip_country_db', this.ipCountryFilename);
@@ -125,6 +154,14 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
       logging.info(`outline-ss-server has exited with error. Code: ${code}, Signal: ${signal}`);
       logging.info('Restarting');
       this.start();
+    });
+    
+    this.ssProcess.stdout.on('data', (data) => {
+      logging.info(`Shadowsocks stdout: ${data}`);
+    });
+
+    this.ssProcess.stderr.on('data', (data) => {
+      logging.error(`Shadowsocks stderr: ${data}`);
     });
 
     this.ssProcess.stdout.pipe(process.stdout);
