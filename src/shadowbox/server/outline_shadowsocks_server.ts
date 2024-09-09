@@ -16,6 +16,7 @@ import * as child_process from 'child_process';
 import * as jsyaml from 'js-yaml';
 import * as mkdirp from 'mkdirp';
 import * as path from 'path';
+import * as https from 'https';
 import { SocksProxyAgent } from 'socks-proxy-agent'; // 引入 SOCKS5 代理模块
 
 import * as file from '../infrastructure/file';
@@ -155,7 +156,7 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
       logging.info('Restarting');
       this.start();
     });
-    
+
     this.ssProcess.stdout.on('data', (data) => {
       logging.info(`Shadowsocks stdout: ${data}`);
     });
