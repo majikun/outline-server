@@ -1,49 +1,27 @@
-# Copyright 2018 The Outline Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use Ubuntu 22.04 as the base image
+FROM ubuntu:22.04
 
-# Use the existing NODE_IMAGE that is pinned to the Alpine-based Node.js image
-ARG NODE_IMAGE
-FROM ${NODE_IMAGE}
-ARG VERSION
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    apt-transport-https curl gnupg lsb-release iproute2
 
-LABEL shadowbox.node_version=16.18.0
-LABEL shadowbox.github.release=${VERSION}
+# Add Cloudflare WARP repository and install the client
+RUN curl https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list \
+    && apt-get update && apt-get install -y cloudflare-warp
 
-# The user management service doesn't quit with SIGTERM.
-STOPSIGNAL SIGKILL
-
-# Install necessary packages using Alpine's package manager 'apk'
-RUN apk add --no-cache coreutils curl iproute2 gnupg
-
-# Manually download and install Cloudflare WARP for Alpine
-RUN curl -LO https://pkg.cloudflareclient.com/releases/cloudflare-warp-linux-x86_64.tgz \
-    && tar -xvzf cloudflare-warp-linux-x86_64.tgz \
-    && cp cloudflare-warp-linux-x86_64/warp-cli /usr/local/bin/ \
-    && rm -rf cloudflare-warp-linux-x86_64*
-
-# Register Cloudflare WARP
-RUN warp-cli register
+# Register WARP and set it to proxy mode
+RUN warp-cli registration new
 RUN warp-cli set-mode proxy
 
-# Copy project files into the container
+# Copy project files (Outline server)
 COPY . /
 
-# Update MMDB databases
+# Update MMDB databases (Outline server)
 RUN /etc/periodic/weekly/update_mmdb.sh
 
-# Set working directory
+# Set working directory for Outline server
 WORKDIR /opt/outline-server
 
-# Ensure WARP connects on container startup and run the Outline server
-CMD warp-cli connect && /cmd.sh
+# Start the WARP service directly and the Outline server
+CMD /usr/bin/warp-svc & warp-cli connect && /cmd.sh
