@@ -1,5 +1,7 @@
 # Use Ubuntu-based Node.js image
 FROM node:18.18.0
+ENV ALL_PROXY=socks5h://127.0.0.1:40000
+
 
 # Install necessary packages
 RUN apt-get update && apt-get install -y \

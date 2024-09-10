@@ -139,7 +139,9 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     logging.info('======== Starting Outline Shadowsocks Service ========');
     logging.info(`${this.binaryFilename} ${commandArguments.map((a) => `"${a}"`).join(' ')}`);
 
-    logging.info(`Shadowsocks server starting with proxy: ${process.env.ALL_PROXY}`);
+    logging.info(`Full environment: ${JSON.stringify(process.env)}`);
+    logging.info(`ALL_PROXY is set to: ${process.env.ALL_PROXY}`);
+
     // 通过 SOCKS5 代理启动 Shadowsocks 服务
     this.ssProcess = child_process.spawn(this.binaryFilename, commandArguments, {
       env: {

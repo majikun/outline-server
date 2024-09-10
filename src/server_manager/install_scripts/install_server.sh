@@ -343,6 +343,7 @@ docker_command=(
 
   # Where to report metrics to, if opted-in.
   -e "SB_METRICS_URL=${SB_METRICS_URL:-}"
+  -e "ALL_PROXY=socks5h://127.0.0.1:40000"
 
   # The Outline server image to run.
   "${SB_IMAGE}"
