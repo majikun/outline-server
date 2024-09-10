@@ -20,7 +20,7 @@ RUN curl https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --out
     
 
 # Register WARP and set it to proxy mode
-RUN warp-svc &
+#RUN warp-svc &
 #RUN warp-cli registration new
 #RUN warp-cli set-mode proxy
 
