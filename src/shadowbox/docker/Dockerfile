@@ -1,5 +1,5 @@
-# Use Ubuntu 22.04 as the base image
-FROM ubuntu:22.04
+# Use Ubuntu-based Node.js image
+FROM node:18.18.0
 
 # Install necessary packages
 RUN apt-get update && apt-get install -y \
@@ -11,6 +11,7 @@ RUN curl https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --out
     && apt-get update && apt-get install -y cloudflare-warp
 
 # Register WARP and set it to proxy mode
+RUN warp-svc &
 RUN warp-cli registration new
 RUN warp-cli set-mode proxy
 
@@ -23,5 +24,6 @@ RUN /etc/periodic/weekly/update_mmdb.sh
 # Set working directory for Outline server
 WORKDIR /opt/outline-server
 
-# Start the WARP service directly and the Outline server
-CMD /usr/bin/warp-svc & warp-cli connect && /cmd.sh
+# Ensure WARP connects on container startup and run the Outline server
+CMD warp-cli connect && /cmd.sh
+#CMD /cmd.sh
