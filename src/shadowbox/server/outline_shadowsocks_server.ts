@@ -139,6 +139,7 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     logging.info('======== Starting Outline Shadowsocks Service ========');
     logging.info(`${this.binaryFilename} ${commandArguments.map((a) => `"${a}"`).join(' ')}`);
 
+    logging.info(`Shadowsocks server starting with proxy: ${process.env.ALL_PROXY}`);
     // 通过 SOCKS5 代理启动 Shadowsocks 服务
     this.ssProcess = child_process.spawn(this.binaryFilename, commandArguments, {
       env: {
@@ -146,6 +147,7 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
         'ALL_PROXY': 'socks5h://127.0.0.1:40000' // 设置 ALL_PROXY 环境变量以强制通过代理
       }
     });
+    logging.info(`Shadowsocks server starting with proxy2: ${process.env.ALL_PROXY}`);
 
     this.ssProcess.on('error', (error) => {
       logging.error(`Error spawning outline-ss-server: ${error}`);
