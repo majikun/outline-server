@@ -120,7 +120,7 @@ export class OutlineShadowsocksServer implements ShadowsocksServer {
     logging.info('Starting Shadowsocks service with proxy...');
 
     // Check if the proxy is working before starting the service
-    this.checkProxyConnection();
+    //this.checkProxyConnection();
 
     const commandArguments = ['-config', this.configFilename, '-metrics', this.metricsLocation];
     if (this.ipCountryFilename) {
